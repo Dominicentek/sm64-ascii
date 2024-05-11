@@ -80,7 +80,6 @@ void gfx_term_handle_events() {
     }
     while (kbhit()) {
         char c = getch();
-        printf("Pressed: %c\n", c);
         if (c == 3) game_exit();
         if (key_timers[c] == 0 && kb_down) kb_down(c);
         key_timers[c] = 5;
@@ -111,11 +110,11 @@ void gfx_term_swap_buffers_begin() {
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
     glBindTexture(GL_TEXTURE_2D, 0);
     int ptr = 0;
-    for (int y = gfx_current_dimensions.height - 1; y >= 0; y--) {
+    for (int y = gfx_current_dimensions.height - 1; y >= 0; y -= 2) {
         for (int x = 0; x < gfx_current_dimensions.width; x++) {
-            if (y % 2 == 1) continue;
-            int i = (y * gfx_current_dimensions.width + x) * 4;
-            ptr += sprintf(ansi + ptr, "\e[48;2;%d;%d;%dm ", image[i + 0], image[i + 1], image[i + 2]);
+            int i = ((y - 0) * gfx_current_dimensions.width + x) * 4;
+            int j = ((y - 1) * gfx_current_dimensions.width + x) * 4;
+            ptr += sprintf(ansi + ptr, "\e[38;2;%d;%d;%dm\e[48;2;%d;%d;%dm▀", image[i + 0], image[i + 1], image[i + 2], image[j + 0], image[j + 1], image[j + 2]);
         }
     }
     fwrite("\e[2J\e[1;1H", 10, 1, stdout);
@@ -129,8 +128,8 @@ void gfx_term_swap_buffers_begin() {
 
 void gfx_term_swap_buffers_end() {
     float curr = clock() / (float)CLOCKS_PER_SEC;
-    float delta = prev_time - curr;
-    if (delta < 1 / 40.f) usleep((1 / 40.f - delta) * 1000000);
+    float delta = curr - prev_time;
+    if (delta < 1 / 30.f) usleep((1 / 30.f - delta) * 1000000);
     prev_time = curr;
 }
 
@@ -141,6 +140,8 @@ double gfx_term_get_time() {
 void gfx_term_shutdown() {
     kbhit_deinit();
     glfwTerminate();
+    printf("\e[0m\n");
+    fflush(stdout);
 }
 
 struct GfxWindowManagerAPI gfx_term = {
