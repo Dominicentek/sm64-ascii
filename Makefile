@@ -61,8 +61,8 @@ NO_LDIV ?= 0
 
 # Renderers: GL, GL_LEGACY, D3D11, D3D12
 RENDER_API ?= GL
-# Window managers: SDL1, SDL2, DXGI (forced if D3D11 or D3D12 in RENDER_API)
-WINDOW_API ?= SDL2
+# Window managers: SDL1, SDL2, DXGI (forced if D3D11 or D3D12 in RENDER_API), TERM (for rendering graphics through ANSI in a terminal, only works with Linux)
+WINDOW_API ?= TERM
 # Audio backends: SDL1, SDL2
 AUDIO_API ?= SDL2
 # Controller backends (can have multiple, space separated): SDL2, SDL1
@@ -532,6 +532,8 @@ else ifeq ($(findstring SDL,$(WINDOW_API)),SDL)
   else
     BACKEND_LDFLAGS += -lGL
   endif
+else ifeq ($(WINDOW_API),TERM)
+  BACKEND_LDFLAGS += -lglfw -lGL
 endif
 
 ifneq (,$(findstring SDL2,$(AUDIO_API)$(WINDOW_API)$(CONTROLLER_API)))

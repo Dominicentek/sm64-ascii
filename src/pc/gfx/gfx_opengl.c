@@ -8,8 +8,6 @@
 #endif
 #include <PR/gbi.h>
 
-#include "gfx_pc.h"
-
 #ifdef __MINGW32__
 # define FOR_WINDOWS 1
 #else
@@ -35,6 +33,12 @@
 # ifndef GLEW_STATIC
 #  include <SDL/SDL_opengl.h>
 # endif
+#endif
+
+#ifdef WAPI_TERM
+#include <GL/gl.h>
+#include <GLES2/gl2.h>
+#include <stdio.h>
 #endif
 
 #include "../platform.h"
@@ -646,29 +650,8 @@ static void gfx_opengl_init(void) {
 static void gfx_opengl_on_resize(void) {
 }
 
-GLuint framebuffer_id;
-GLuint depthbuffer_id;
-GLuint rendertexture_id;
-
-unsigned char* image = 0;
-unsigned char* flipped = 0;
-char* ansi = 0;
-
 static void gfx_opengl_start_frame(void) {
     frame_count++;
-
-    glGenFramebuffers(1, &framebuffer_id);
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer_id);
-    glGenTextures(1, &rendertexture_id);
-    glBindTexture(GL_TEXTURE_2D, rendertexture_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gfx_current_dimensions.width, gfx_current_dimensions.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rendertexture_id, 0);
-    glGenRenderbuffers(1, &depthbuffer_id);
-    glBindRenderbuffer(GL_RENDERBUFFER, depthbuffer_id);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, gfx_current_dimensions.width, gfx_current_dimensions.height);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthbuffer_id);
 
     glDisable(GL_SCISSOR_TEST);
     glDepthMask(GL_TRUE); // Must be set to clear Z-buffer
@@ -678,25 +661,6 @@ static void gfx_opengl_start_frame(void) {
 }
 
 static void gfx_opengl_end_frame(void) {
-    if (!image) image = (unsigned char*)malloc(1000 * 500 * 4);
-    if (!flipped) flipped = (unsigned char*)malloc(1000 * 500 * 4);
-    if (!ansi) ansi = (char*)malloc(1000 * 500 * 20);
-    glBindTexture(GL_TEXTURE_2D, framebuffer_id);
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    int ptr = 0;
-    for (int y = gfx_current_dimensions.height - 1; y >= 0; y--) {
-        for (int x = 0; x < gfx_current_dimensions.width; x++) {
-            if (y % 2 == 1) continue;
-            int i = (y * gfx_current_dimensions.width + x) * 4;
-            ptr += sprintf(ansi + ptr, "\e[48;2;%d;%d;%dm ", image[i + 0], image[i + 1], image[i + 2]);
-        }
-    }
-    fwrite(ansi, strlen(ansi), 1, stdout);
-    fflush(stdout);
-    glDeleteFramebuffers(1, &framebuffer_id);
-    glDeleteRenderbuffers(1, &depthbuffer_id);
-    glDeleteTextures(1, &rendertexture_id);
 }
 
 static void gfx_opengl_finish_render(void) {
